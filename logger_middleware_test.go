@@ -68,6 +68,24 @@ func Test_MiddlewareSetLogger(t *testing.T) {
 		reqLogger.Info("log message")
 		g.Expect(len(observedLogs.FilterFieldKey(string(ResuestIDHeader)).All())).To(Equal(1))
 	})
+
+	t.Run("It can use the X-Request-Id header from the original request", func(t *testing.T) {
+		logger, err := NewZapLogger(StringToLogLevel("debug"))
+		g.Expect(err).ToNot(HaveOccurred())
+
+		requestID := ""
+		response := httptest.NewRecorder()
+		request := httptest.NewRequest("GET", "http://127.0.0.1:8080", bytes.NewBuffer([]byte{}))
+		request.Header.Add(string(ResuestIDHeader), "1234")
+
+		callback := MiddlewareSetLogger(logger, func(w http.ResponseWriter, r *http.Request) {
+			requestID = MiddlewareRequestID(r.Context())
+		})
+
+		callback(response, request)
+		g.Expect(requestID).To(Equal("1234"))
+
+	})
 }
 
 func Test_NamedMiddlwareLogger(t *testing.T) {
